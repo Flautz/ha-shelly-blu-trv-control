@@ -1,0 +1,212 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BLU Gateway auswählen",
+        "description": "Wähle das Shelly BLU Gateway Gen3, mit dem deine BLU TRVs gekoppelt sind.",
+        "data": {
+          "shelly_entry_id": "Gateway"
+        }
+      },
+      "manual": {
+        "title": "Gateway-Adresse",
+        "description": "Adresse des Shelly BLU Gateway Gen3 eingeben.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "password": "Nur nötig, wenn am Gateway ein Passwort gesetzt ist."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_auth": "Ungültige Anmeldedaten",
+      "not_a_gateway": "Dieses Gerät unterstützt keine BLU TRVs (BLU Gateway Gen3 benötigt).",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Gateway ist bereits eingerichtet"
+    }
+  },
+  "selector": {
+    "gateway": {
+      "options": {
+        "manual": "Adresse manuell eingeben"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Zeitplan"
+      }
+    },
+    "switch": {
+      "schedule_enabled": {
+        "name": "Zeitplan aktiv"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_trv": {
+      "message": "{entity_id} ist kein von dieser Integration verwalteter Shelly BLU TRV."
+    },
+    "not_loaded": {
+      "message": "Das Gateway von {entity_id} ist nicht geladen."
+    }
+  },
+  "services": {
+    "get_schedule": {
+      "name": "Zeitplan abrufen",
+      "description": "Liefert die auf dem TRV gespeicherten Zeitplanregeln.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Zeitplan-Sensor (oder eine andere Entität) des BLU TRV."
+        },
+        "refresh": {
+          "name": "Neu laden",
+          "description": "Regeln vom TRV lesen statt aus dem Cache."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Zeitplan setzen",
+      "description": "Ersetzt alle Zeitplanregeln auf dem TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Zeitplan-Sensor (oder eine andere Entität) des BLU TRV."
+        },
+        "rules": {
+          "name": "Regeln",
+          "description": "Liste von Regeln mit time, days und target_C (oder pos), optional enable."
+        }
+      }
+    },
+    "add_rule": {
+      "name": "Regel hinzufügen",
+      "description": "Fügt dem TRV eine Zeitplanregel hinzu.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Zeitplan-Sensor (oder eine andere Entität) des BLU TRV."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Uhrzeit, zu der die Regel ausgelöst wird (HH:MM)."
+        },
+        "days": {
+          "name": "Wochentage",
+          "description": "Wochentage, an denen die Regel aktiv ist."
+        },
+        "target_C": {
+          "name": "Solltemperatur",
+          "description": "Einzustellende Solltemperatur."
+        },
+        "pos": {
+          "name": "Ventilstellung",
+          "description": "Feste Ventilstellung statt einer Temperatur."
+        },
+        "enable": {
+          "name": "Aktiv",
+          "description": "Ob die Regel aktiv ist."
+        },
+        "timespec": {
+          "name": "Timespec",
+          "description": "Shelly-Cron-Ausdruck (statt Uhrzeit und Wochentagen)."
+        }
+      }
+    },
+    "update_rule": {
+      "name": "Regel ändern",
+      "description": "Ändert eine bestehende Zeitplanregel.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Zeitplan-Sensor (oder eine andere Entität) des BLU TRV."
+        },
+        "rule_id": {
+          "name": "Regel-ID",
+          "description": "ID der Regel auf dem TRV (siehe Sensor-Attribute)."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Uhrzeit, zu der die Regel ausgelöst wird (HH:MM)."
+        },
+        "days": {
+          "name": "Wochentage",
+          "description": "Wochentage, an denen die Regel aktiv ist."
+        },
+        "target_C": {
+          "name": "Solltemperatur",
+          "description": "Einzustellende Solltemperatur."
+        },
+        "pos": {
+          "name": "Ventilstellung",
+          "description": "Feste Ventilstellung statt einer Temperatur."
+        },
+        "enable": {
+          "name": "Aktiv",
+          "description": "Ob die Regel aktiv ist."
+        },
+        "timespec": {
+          "name": "Timespec",
+          "description": "Shelly-Cron-Ausdruck (statt Uhrzeit und Wochentagen)."
+        }
+      }
+    },
+    "remove_rule": {
+      "name": "Regel löschen",
+      "description": "Löscht eine Zeitplanregel vom TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Zeitplan-Sensor (oder eine andere Entität) des BLU TRV."
+        },
+        "rule_id": {
+          "name": "Regel-ID",
+          "description": "ID der Regel auf dem TRV (siehe Sensor-Attribute)."
+        }
+      }
+    },
+    "copy_schedule": {
+      "name": "Zeitplan kopieren",
+      "description": "Kopiert den Zeitplan eines TRV auf andere.",
+      "fields": {
+        "source": {
+          "name": "Quelle",
+          "description": "TRV, von dem kopiert wird."
+        },
+        "entity_id": {
+          "name": "Ziele",
+          "description": "TRVs, die den Zeitplan erhalten."
+        }
+      }
+    },
+    "refresh": {
+      "name": "Zeitplan neu laden",
+      "description": "Liest den Zeitplan erneut vom TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Zeitplan-Sensor (oder eine andere Entität) des BLU TRV."
+        }
+      }
+    }
+  }
+}

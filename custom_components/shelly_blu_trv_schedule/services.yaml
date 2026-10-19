@@ -1,0 +1,115 @@
+get_schedule:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: shelly_blu_trv_schedule
+              domain: sensor
+    refresh:
+      default: false
+      selector:
+        boolean:
+
+set_schedule:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: shelly_blu_trv_schedule
+              domain: sensor
+    rules:
+      required: true
+      example: >-
+        [{"time": "06:30", "days": ["mon","tue","wed","thu","fri"], "target_C": 21},
+         {"time": "22:00", "days": "all", "target_C": 17}]
+      selector:
+        object:
+
+add_rule:
+  fields:
+    entity_id: &trv
+      required: true
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: shelly_blu_trv_schedule
+              domain: sensor
+    time: &time
+      example: "06:30"
+      selector:
+        time:
+    days: &days
+      example: '["mon", "tue", "wed", "thu", "fri"]'
+      selector:
+        select:
+          multiple: true
+          translation_key: weekday
+          options: [mon, tue, wed, thu, fri, sat, sun]
+    target_C: &target
+      selector:
+        number:
+          min: 4
+          max: 30
+          step: 0.5
+          unit_of_measurement: "°C"
+    pos: &pos
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    enable: &enable
+      default: true
+      selector:
+        boolean:
+    timespec: &timespec
+      advanced: true
+      example: "0 30 6 * * MON,TUE,WED,THU,FRI"
+      selector:
+        text:
+
+update_rule:
+  fields:
+    entity_id: *trv
+    rule_id: &rule_id
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    time: *time
+    days: *days
+    target_C: *target
+    pos: *pos
+    enable:
+      selector:
+        boolean:
+    timespec: *timespec
+
+remove_rule:
+  fields:
+    entity_id: *trv
+    rule_id: *rule_id
+
+copy_schedule:
+  fields:
+    source:
+      required: true
+      selector:
+        entity:
+          filter:
+            - integration: shelly_blu_trv_schedule
+              domain: sensor
+    entity_id: *trv
+
+refresh:
+  fields:
+    entity_id: *trv

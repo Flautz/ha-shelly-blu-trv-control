@@ -1,0 +1,212 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select BLU Gateway",
+        "description": "Choose the Shelly BLU Gateway Gen3 your BLU TRVs are paired with.",
+        "data": {
+          "shelly_entry_id": "Gateway"
+        }
+      },
+      "manual": {
+        "title": "Gateway address",
+        "description": "Enter the address of the Shelly BLU Gateway Gen3.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "password": "Password"
+        },
+        "data_description": {
+          "password": "Only needed if authentication is enabled on the gateway."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "not_a_gateway": "This device does not support BLU TRVs (needs a BLU Gateway Gen3).",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Gateway is already configured"
+    }
+  },
+  "selector": {
+    "gateway": {
+      "options": {
+        "manual": "Enter address manually"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "schedule": {
+        "name": "Schedule"
+      }
+    },
+    "switch": {
+      "schedule_enabled": {
+        "name": "Schedule active"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_trv": {
+      "message": "{entity_id} is not a Shelly BLU TRV handled by this integration."
+    },
+    "not_loaded": {
+      "message": "The gateway of {entity_id} is not loaded."
+    }
+  },
+  "services": {
+    "get_schedule": {
+      "name": "Get schedule",
+      "description": "Returns the schedule rules stored on the TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Schedule sensor (or any entity) of the BLU TRV."
+        },
+        "refresh": {
+          "name": "Refresh",
+          "description": "Read the rules from the TRV instead of the cache."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Set schedule",
+      "description": "Replaces all schedule rules on the TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Schedule sensor (or any entity) of the BLU TRV."
+        },
+        "rules": {
+          "name": "Rules",
+          "description": "List of rules with time, days and target_C (or pos), optionally enable."
+        }
+      }
+    },
+    "add_rule": {
+      "name": "Add rule",
+      "description": "Adds a schedule rule to the TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Schedule sensor (or any entity) of the BLU TRV."
+        },
+        "time": {
+          "name": "Time",
+          "description": "Time of day the rule fires (HH:MM)."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Weekdays the rule is active on."
+        },
+        "target_C": {
+          "name": "Target temperature",
+          "description": "Target temperature to set."
+        },
+        "pos": {
+          "name": "Valve position",
+          "description": "Fixed valve position instead of a temperature."
+        },
+        "enable": {
+          "name": "Enabled",
+          "description": "Whether the rule is enabled."
+        },
+        "timespec": {
+          "name": "Timespec",
+          "description": "Raw Shelly cron expression (instead of time and days)."
+        }
+      }
+    },
+    "update_rule": {
+      "name": "Update rule",
+      "description": "Changes an existing schedule rule.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Schedule sensor (or any entity) of the BLU TRV."
+        },
+        "rule_id": {
+          "name": "Rule ID",
+          "description": "ID of the rule on the TRV (see the sensor attributes)."
+        },
+        "time": {
+          "name": "Time",
+          "description": "Time of day the rule fires (HH:MM)."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Weekdays the rule is active on."
+        },
+        "target_C": {
+          "name": "Target temperature",
+          "description": "Target temperature to set."
+        },
+        "pos": {
+          "name": "Valve position",
+          "description": "Fixed valve position instead of a temperature."
+        },
+        "enable": {
+          "name": "Enabled",
+          "description": "Whether the rule is enabled."
+        },
+        "timespec": {
+          "name": "Timespec",
+          "description": "Raw Shelly cron expression (instead of time and days)."
+        }
+      }
+    },
+    "remove_rule": {
+      "name": "Remove rule",
+      "description": "Removes a schedule rule from the TRV.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Schedule sensor (or any entity) of the BLU TRV."
+        },
+        "rule_id": {
+          "name": "Rule ID",
+          "description": "ID of the rule on the TRV (see the sensor attributes)."
+        }
+      }
+    },
+    "copy_schedule": {
+      "name": "Copy schedule",
+      "description": "Copies the schedule of one TRV to others.",
+      "fields": {
+        "source": {
+          "name": "Source",
+          "description": "TRV to copy the schedule from."
+        },
+        "entity_id": {
+          "name": "Targets",
+          "description": "TRVs that receive the schedule."
+        }
+      }
+    },
+    "refresh": {
+      "name": "Refresh schedule",
+      "description": "Reads the schedule from the TRV again.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat",
+          "description": "Schedule sensor (or any entity) of the BLU TRV."
+        }
+      }
+    }
+  }
+}

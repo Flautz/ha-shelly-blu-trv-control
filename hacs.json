@@ -1,0 +1,5 @@
+{
+  "name": "Shelly BLU TRV Schedule",
+  "homeassistant": "2025.1.0",
+  "render_readme": true
+}

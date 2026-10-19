@@ -1,0 +1,22 @@
+{
+  "domain": "shelly_blu_trv_schedule",
+  "name": "Shelly BLU TRV Schedule",
+  "after_dependencies": [
+    "shelly"
+  ],
+  "codeowners": [
+    "@Flautz"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http",
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/Flautz/ha-shelly-blu-trv-schedule",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Flautz/ha-shelly-blu-trv-schedule/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
