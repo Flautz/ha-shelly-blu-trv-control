@@ -50,6 +50,11 @@
     }
   },
   "entity": {
+    "climate": {
+      "thermostat": {
+        "name": "Thermostat"
+      }
+    },
     "sensor": {
       "schedule": {
         "name": "Zeitplan"
@@ -67,6 +72,9 @@
     },
     "not_loaded": {
       "message": "Das Gateway von {entity_id} ist nicht geladen."
+    },
+    "no_schedule": {
+      "message": "Auf dem TRV ist kein Zeitplan gespeichert; lege zuerst einen an, bevor du auf Auto schaltest."
     }
   },
   "services": {

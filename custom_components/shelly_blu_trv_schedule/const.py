@@ -17,6 +17,15 @@ SCAN_INTERVAL = timedelta(seconds=60)
 RPC_TIMEOUT = 75
 LOCAL_RPC_TIMEOUT = 15
 
+# After a failed background read of a schedule, wait before trying again
+# (doubling up to the maximum). Calls that time out stay queued on the
+# gateway, so retrying every poll would block it for all TRVs.
+FETCH_BACKOFF = timedelta(minutes=2)
+FETCH_BACKOFF_MAX = timedelta(minutes=30)
+
+# Target used when switching from "off" to "heat" without a remembered one.
+DEFAULT_HEAT_C = 20.0
+
 BLUTRV_PREFIX = "blutrv:"
 GATEWAY_MODEL_PREFIX = "S3GW"
 

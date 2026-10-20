@@ -24,7 +24,7 @@ from .websocket import async_setup_websocket
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 

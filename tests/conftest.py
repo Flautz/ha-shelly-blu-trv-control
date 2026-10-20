@@ -23,14 +23,23 @@ class FakeTrv:
     def __init__(self, rules: list[dict[str, Any]]) -> None:
         self.rules = copy.deepcopy(rules)
         self.rev = 7
+        self.target = 8.0
         self.calls: list[str] = []
         self.fail_next: str | None = None
+        self.fail_always: str | None = None
 
     def call(self, method: str, params: dict[str, Any]) -> Any:
         self.calls.append(method)
         if self.fail_next == method:
             self.fail_next = None
             raise GatewayConnectionError("BLE timeout")
+        if self.fail_always == method:
+            raise RpcError(504, "Timeout (queue)")
+        if method == "TRV.SetTarget":
+            if not 4 <= params["target_C"] <= 30:
+                return {"code": -103, "message": "Argument `target_C` is invalid"}
+            self.target = params["target_C"]
+            return None
         if method == "TRV.ListScheduleRules":
             return {"schedule_rev": self.rev, "rules": copy.deepcopy(self.rules)}
         if method == "TRV.AddScheduleRule":
@@ -127,14 +136,15 @@ class FakeGateway:
             return {"methods": ["Shelly.GetComponents", "BluTrv.Call", "BluTrv.GetRemoteStatus"]}
         if method == "Shelly.GetComponents":
             comps = [{"key": "ble", "status": {}, "config": {}}]
-            for trv_id, (addr, _) in self.trvs.items():
+            for trv_id, (addr, trv) in self.trvs.items():
                 comps.append(
                     {
                         "key": f"blutrv:{trv_id}",
                         "status": {
                             "id": trv_id,
-                            "target_C": 8.0,
+                            "target_C": trv.target,
                             "current_C": 19.0,
+                            "pos": 0,
                             "connected": True,
                             "battery": 75,
                             "fw_ver": "v1.5.1",

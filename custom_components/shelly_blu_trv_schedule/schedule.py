@@ -277,3 +277,27 @@ def next_change(
                 best = (when, rule)
             break
     return best
+
+
+def current_rule(rules: list[dict[str, Any]], now: datetime) -> dict[str, Any] | None:
+    """Return the enabled weekly rule that fired last at or before ``now``."""
+    best: tuple[datetime, dict[str, Any]] | None = None
+    for rule in rules:
+        if not rule.get("enable", True):
+            continue
+        parsed = parse_timespec(rule.get("timespec", ""))
+        if parsed is None:
+            continue
+        hour, minute = normalize_time(parsed[0])
+        days = {WEEKDAYS.index(d) for d in parsed[1]}
+        for offset in range(8):
+            day = now - timedelta(days=offset)
+            if day.weekday() not in days:
+                continue
+            when = day.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if when > now:
+                continue
+            if best is None or when > best[0]:
+                best = (when, rule)
+            break
+    return best[1] if best else None

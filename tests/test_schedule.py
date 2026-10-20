@@ -8,6 +8,7 @@ from custom_components.shelly_blu_trv_schedule.schedule import (
     Limits,
     ScheduleError,
     build_timespec,
+    current_rule,
     next_change,
     normalize_rule,
     parse_timespec,
@@ -127,3 +128,23 @@ def test_next_change():
         [{"enable": True, "target_C": 20, "timespec": "0 0 8 * * MON"}], datetime(2026, 10, 19, 9)
     )
     assert when == datetime(2026, 10, 26, 8, 0)
+
+
+def test_current_rule():
+    rules = [
+        {"rule_id": 0, "enable": True, "target_C": 21.0, "timespec": "0 0 8 * * MON-FRI"},
+        {"rule_id": 1, "enable": True, "target_C": 17.0, "timespec": "0 0 22 * * *"},
+        {"rule_id": 2, "enable": False, "target_C": 5.0, "timespec": "0 0 12 * * *"},
+    ]
+    # Monday 2026-10-19 13:00 -> 08:00 rule (the disabled 12:00 one is ignored)
+    assert current_rule(rules, datetime(2026, 10, 19, 13, 0))["rule_id"] == 0
+    # Exactly at 22:00 the 22:00 rule has fired
+    assert current_rule(rules, datetime(2026, 10, 19, 22, 0))["rule_id"] == 1
+    # Saturday 10:00 -> Friday 22:00
+    assert current_rule(rules, datetime(2026, 10, 24, 10, 0))["rule_id"] == 1
+    # Monday 07:00 -> Sunday 22:00
+    assert current_rule(rules, datetime(2026, 10, 19, 7, 0))["rule_id"] == 1
+    # A single weekly rule fired six days ago
+    weekly = [{"enable": True, "target_C": 20, "timespec": "0 0 8 * * MON"}]
+    assert current_rule(weekly, datetime(2026, 10, 25, 9)) is weekly[0]
+    assert current_rule([rules[2]], datetime(2026, 10, 19)) is None

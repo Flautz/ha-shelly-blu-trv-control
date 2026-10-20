@@ -50,6 +50,11 @@
     }
   },
   "entity": {
+    "climate": {
+      "thermostat": {
+        "name": "Thermostat"
+      }
+    },
     "sensor": {
       "schedule": {
         "name": "Schedule"
@@ -67,6 +72,9 @@
     },
     "not_loaded": {
       "message": "The gateway of {entity_id} is not loaded."
+    },
+    "no_schedule": {
+      "message": "The TRV has no schedule; create one before switching to auto."
     }
   },
   "services": {

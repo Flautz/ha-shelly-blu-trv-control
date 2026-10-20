@@ -16,6 +16,14 @@ The TRVs are reached through a **Shelly BLU Gateway Gen3** (local RPC
   editor: time, weekdays, temperature or valve position, on/off per rule,
   add/delete, save. It can also copy a schedule to another TRV.
 - Per TRV:
+  - `climate.<trv>_thermostat`: thermostat with the modes **auto** (the schedule
+    on the TRV runs), **heat** (manual: schedule paused, target as set) and
+    **off** (schedule paused, minimum target of 4 °C as frost protection; switching
+    back to heat restores the previous target). Switching to auto applies the
+    current schedule period right away. Changing the target in auto lasts until the
+    next switching time, like on Homematic thermostats. Use it with the
+    `thermostat` card and the `climate-hvac-modes` feature. Temperatures come from
+    the Shelly climate entity of the TRV, so they update without delay.
   - `sensor.<trv>_schedule`: next scheduled change (timestamp). The attributes
     hold the rules (`time`, `days`, `target_C`/`pos`, `enable`, `rule_id`).
   - `switch.<trv>_schedule_active`: pauses the schedule by disabling all rules,
@@ -47,6 +55,16 @@ The card is registered automatically, so you don't need to add a Lovelace resour
 type: custom:shelly-trv-schedule-card
 entity: sensor.schlafzimmer_zeitplan
 # title: Bedroom   # optional
+```
+
+Thermostat card with mode buttons:
+
+```yaml
+type: thermostat
+entity: climate.schlafzimmer_thermostat
+features:
+  - type: climate-hvac-modes
+    hvac_modes: [auto, heat, "off"]
 ```
 
 ## Service examples
@@ -88,6 +106,8 @@ position 0–100 %). Advanced Shelly cron expressions can be given as `timespec`
   10–20 s while the gateway connects to the TRV.
 - If a write fails halfway (TRV out of range, for example), the card and sensor
   show the schedule as it is on the TRV after the failure.
+- The thermostat shows **off** whenever the schedule is paused and the target is at
+  the TRV's minimum; turning the ring above it switches to heat.
 - Timespecs are written the same way the Shelly app writes them
   (`0 30 6 * * MON,TUE,…`), so the app still displays them correctly.
 

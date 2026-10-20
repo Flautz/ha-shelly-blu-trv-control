@@ -9,13 +9,14 @@ from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.shelly_blu_trv_schedule.const import CONF_SHELLY_ENTRY_ID, DOMAIN
+from custom_components.shelly_blu_trv_schedule.schedule import current_rule
 
 from .conftest import ADDR, GW_MAC
 
@@ -24,6 +25,8 @@ pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 SENSOR = "sensor.shellyblutrv_f84477000001_schedule"
 SENSOR2 = "sensor.shellyblutrv_f84477000002_schedule"
 SWITCH = "switch.shellyblutrv_f84477000001_schedule_active"
+CLIMATE = "climate.shellyblutrv_f84477000001_thermostat"
+CLIMATE2 = "climate.shellyblutrv_f84477000002_thermostat"
 
 
 async def _setup(hass: HomeAssistant) -> MockConfigEntry:
@@ -325,3 +328,158 @@ async def test_pause_switch(hass: HomeAssistant, gateway) -> None:
     await hass.services.async_call("switch", "turn_on", {"entity_id": SWITCH}, blocking=True)
     assert [r["enable"] for r in trv.rules] == [True, False]
     assert hass.states.get(SWITCH).state == "on"
+
+
+async def _climate(hass: HomeAssistant, service: str, **data) -> None:
+    await hass.services.async_call(
+        "climate", service, {"entity_id": data.pop("entity_id", CLIMATE), **data}, blocking=True
+    )
+
+
+async def test_thermostat_modes(hass: HomeAssistant, gateway) -> None:
+    await _setup(hass)
+    trv = gateway.trv()
+    state = hass.states.get(CLIMATE)
+    assert state.state == "auto"
+    assert state.attributes["hvac_modes"] == ["auto", "heat", "off"]
+    assert state.attributes["temperature"] == 8.0
+
+    # Manual: the schedule is paused, the target stays.
+    trv.calls.clear()
+    await _climate(hass, "set_hvac_mode", hvac_mode="heat")
+    assert [r["enable"] for r in trv.rules] == [False, False]
+    assert "TRV.SetTarget" not in trv.calls
+    assert hass.states.get(CLIMATE).state == "heat"
+    assert hass.states.get(SWITCH).state == "off"
+
+    await _climate(hass, "set_temperature", temperature=21.5)
+    assert trv.target == 21.5
+    state = hass.states.get(CLIMATE)
+    assert (state.state, state.attributes["temperature"]) == ("heat", 21.5)
+
+    # Off: minimum target; heat restores the previous target.
+    await _climate(hass, "set_hvac_mode", hvac_mode="off")
+    state = hass.states.get(CLIMATE)
+    assert trv.target == 4.0
+    assert (state.state, state.attributes["hvac_action"]) == ("off", "off")
+    await _climate(hass, "set_hvac_mode", hvac_mode="heat")
+    assert trv.target == 21.5
+    assert hass.states.get(CLIMATE).state == "heat"
+
+    # Turning the ring above the minimum while off counts as manual.
+    await _climate(hass, "turn_off")
+    assert hass.states.get(CLIMATE).state == "off"
+    await _climate(hass, "set_temperature", temperature=18)
+    assert hass.states.get(CLIMATE).state == "heat"
+
+    # Auto: rules on again and the current period applied.
+    await _climate(hass, "set_hvac_mode", hvac_mode="auto")
+    assert [r["enable"] for r in trv.rules] == [True, True]
+    expected = current_rule(trv.rules, dt_util.now())["target_C"]
+    state = hass.states.get(CLIMATE)
+    assert trv.target == expected
+    assert (state.state, state.attributes["temperature"]) == ("auto", expected)
+
+    # Off from auto and back on restores the schedule.
+    await _climate(hass, "turn_off")
+    assert [r["enable"] for r in trv.rules] == [False, False]
+    await _climate(hass, "turn_on")
+    assert [r["enable"] for r in trv.rules] == [True, True]
+    assert hass.states.get(CLIMATE).state == "auto"
+
+
+async def test_thermostat_mode_survives_poll(hass: HomeAssistant, gateway) -> None:
+    await _setup(hass)
+    await _climate(hass, "set_hvac_mode", hvac_mode="off")
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
+    await hass.async_block_till_done()
+    state = hass.states.get(CLIMATE)
+    assert (state.state, state.attributes["temperature"]) == ("off", 4.0)
+
+
+async def test_thermostat_without_schedule(hass: HomeAssistant, gateway) -> None:
+    await _setup(hass)
+    state = hass.states.get(CLIMATE2)
+    assert state.attributes["hvac_modes"] == ["heat", "off"]
+    assert state.state == "heat"
+    with pytest.raises(ServiceValidationError):
+        await _climate(hass, "set_hvac_mode", entity_id=CLIMATE2, hvac_mode="auto")
+    await _climate(hass, "turn_off", entity_id=CLIMATE2)
+    assert hass.states.get(CLIMATE2).state == "off"
+    await _climate(hass, "turn_on", entity_id=CLIMATE2)
+    # No target was remembered above the minimum before: 8 °C was.
+    assert gateway.trv(201).target == 8.0
+    assert hass.states.get(CLIMATE2).state == "heat"
+
+
+async def test_thermostat_rejects_out_of_range(hass: HomeAssistant, gateway) -> None:
+    await _setup(hass)
+    with pytest.raises(ServiceValidationError):
+        await _climate(hass, "set_temperature", temperature=35)
+    assert gateway.trv().target == 8.0
+
+
+async def test_thermostat_follows_shelly_climate(hass: HomeAssistant, gateway) -> None:
+    """Temperatures come from the Shelly climate entity (pushed updates)."""
+    shelly = MockConfigEntry(domain="shelly", data={CONF_HOST: "1.2.3.4"})
+    shelly.add_to_hass(hass)
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_or_create(
+        config_entry_id=shelly.entry_id,
+        identifiers={("shelly", ADDR)},
+        name="shellyblutrv-f84477000001",
+    )
+    dev_reg.async_update_device(device.id, name_by_user="Schlafzimmer")
+    source = er.async_get(hass).async_get_or_create(
+        "climate", "shelly", f"{ADDR}-blutrv:200", device_id=device.id, config_entry=shelly
+    )
+    attrs = {"temperature": 8.0, "current_temperature": 20.5, "hvac_action": "heating"}
+    hass.states.async_set(source.entity_id, "heat", attrs)
+    await _setup(hass)
+
+    entity_id = "climate.schlafzimmer_thermostat"
+    state = hass.states.get(entity_id)
+    assert state.attributes["current_temperature"] == 20.5
+    assert state.attributes["hvac_action"] == "heating"
+
+    hass.states.async_set(source.entity_id, "heat", {**attrs, "current_temperature": 21.0})
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).attributes["current_temperature"] == 21.0
+
+    # The target we sent is shown until the device reports a new one ...
+    await _climate(hass, "set_temperature", entity_id=entity_id, temperature=22)
+    assert hass.states.get(entity_id).attributes["temperature"] == 22.0
+    hass.states.async_set(source.entity_id, "heat", {**attrs, "current_temperature": 21.2})
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).attributes["temperature"] == 22.0
+    # ... after that the device wins (e.g. the ring was turned).
+    hass.states.async_set(source.entity_id, "heat", {**attrs, "temperature": 22.0})
+    await hass.async_block_till_done()
+    hass.states.async_set(source.entity_id, "heat", {**attrs, "temperature": 19.0})
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).attributes["temperature"] == 19.0
+
+
+async def test_failed_schedule_read_backs_off(hass: HomeAssistant, gateway, freezer) -> None:
+    """An unreachable TRV is not retried every poll (that blocks the gateway)."""
+    trv = gateway.trv(201)
+    trv.fail_always = "TRV.ListScheduleRules"
+    await _setup(hass)
+    assert trv.calls.count("TRV.ListScheduleRules") == 1
+
+    async def poll(minutes: int) -> int:
+        for _ in range(minutes):
+            freezer.tick(timedelta(minutes=1))
+            async_fire_time_changed(hass)
+            await hass.async_block_till_done()
+        return trv.calls.count("TRV.ListScheduleRules")
+
+    assert await poll(1) == 1
+    assert await poll(1) == 2  # 2 min after the first failure
+    assert await poll(3) == 2
+    assert await poll(1) == 3  # then 4 min
+    trv.fail_always = None
+    assert await poll(8) == 4  # 8 min, succeeds
+    assert hass.states.get(SENSOR2).attributes["loaded"] is True
+    # The other TRV was read normally.
+    assert hass.states.get(SENSOR).attributes["loaded"] is True

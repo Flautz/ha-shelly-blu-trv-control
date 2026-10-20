@@ -4,18 +4,31 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
-from .const import BLUTRV_PREFIX, DOMAIN, SCAN_INTERVAL
+from .const import (
+    BLUTRV_PREFIX,
+    DEFAULT_HEAT_C,
+    DOMAIN,
+    FETCH_BACKOFF,
+    FETCH_BACKOFF_MAX,
+    SCAN_INTERVAL,
+)
 from .rpc import GatewayClient, GatewayError, RpcError
-from .schedule import Limits, ScheduleError, normalize_rule, plan_changes
+from .schedule import Limits, ScheduleError, current_rule, normalize_rule, plan_changes
+
+MODE_AUTO = "auto"
+MODE_HEAT = "heat"
+MODE_OFF = "off"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +47,7 @@ class TrvState:
     battery: int | None = None
     target_C: float | None = None
     current_C: float | None = None
+    pos: int | None = None
     # Revision reported by the TRV status (cheap, cached on the gateway).
     schedule_rev: int | None = None
     # Rules as last read from the TRV and the revision they belong to.
@@ -42,6 +56,9 @@ class TrvState:
     cfg_rev: int | None = None
     limits: Limits = field(default_factory=Limits)
     error: str | None = None
+    # Background reads that failed in a row, and when to try again (monotonic).
+    fetch_failures: int = 0
+    retry_at: float = 0.0
 
     @property
     def rules_stale(self) -> bool:
@@ -49,6 +66,16 @@ class TrvState:
         return self.rules is None or (
             self.schedule_rev is not None and self.schedule_rev != self.rules_rev
         )
+
+    def mode(self, target_c: float | None) -> str | None:
+        """Derive auto/heat/off from the rules and the given target."""
+        if self.rules is None:
+            return None
+        if any(r.get("enable", True) for r in self.rules):
+            return MODE_AUTO
+        if target_c is not None and target_c <= self.limits.min_c:
+            return MODE_OFF
+        return MODE_HEAT
 
 
 class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
@@ -79,9 +106,16 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
             hass, 1, f"{DOMAIN}.{entry.entry_id}.disabled_rules"
         )
         self._paused: dict[str, list[int]] = {}
+        self._mode_lock = asyncio.Lock()
+        # Target before switching off, restored when switching to heat.
+        self._target_store: Store[dict[str, float]] = Store(
+            hass, 1, f"{DOMAIN}.{entry.entry_id}.last_target"
+        )
+        self._last_target: dict[str, float] = {}
 
     async def _async_setup(self) -> None:
         self._paused = await self._store.async_load() or {}
+        self._last_target = await self._target_store.async_load() or {}
 
     def by_addr(self, addr: str) -> TrvState | None:
         """Return the TRV with the given Bluetooth address."""
@@ -113,6 +147,7 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
             trv.battery = status.get("battery")
             trv.target_C = status.get("target_C")
             trv.current_C = status.get("current_C")
+            trv.pos = status.get("pos")
         for trv_id in set(self.trvs) - seen:
             del self.trvs[trv_id]
 
@@ -151,12 +186,23 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
 
     async def _async_fetch_stale(self) -> None:
         for trv in list(self.trvs.values()):
-            if not trv.rules_stale:
+            if not trv.rules_stale or time.monotonic() < trv.retry_at:
                 continue
             try:
                 await self.async_fetch_rules(trv.trv_id)
             except GatewayError as err:
-                _LOGGER.debug("Could not read schedule of TRV %s: %s", trv.trv_id, err)
+                trv.fetch_failures += 1
+                delay = min(
+                    FETCH_BACKOFF.total_seconds() * 2 ** (trv.fetch_failures - 1),
+                    FETCH_BACKOFF_MAX.total_seconds(),
+                )
+                trv.retry_at = time.monotonic() + delay
+                _LOGGER.debug(
+                    "Could not read schedule of TRV %s: %s; retrying in %d s",
+                    trv.trv_id,
+                    err,
+                    delay,
+                )
             # Publish each TRV as soon as it is read; BLE reads take seconds.
             self.async_update_listeners()
 
@@ -177,6 +223,8 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
         trv.rules = list(result.get("rules", []))
         trv.rules_rev = trv.schedule_rev = result.get("schedule_rev")
         trv.error = None
+        trv.fetch_failures = 0
+        trv.retry_at = 0.0
         return trv.rules
 
     async def async_apply_rules(
@@ -257,3 +305,68 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
         if not paused:
             self._paused.pop(trv.addr, None)
         await self._store.async_save(self._paused)
+
+    async def async_set_target(self, trv_id: int, target_c: float) -> float:
+        """Set the target temperature of a TRV and return it as sent."""
+        trv = self.get_trv(trv_id)
+        target = round(float(target_c), 1)
+        if not trv.limits.min_c <= target <= trv.limits.max_c:
+            raise ServiceValidationError(
+                f"Temperature {target} °C outside {trv.limits.min_c}–{trv.limits.max_c} °C"
+            )
+        try:
+            await self.client.trv_call(trv_id, "TRV.SetTarget", {"id": 0, "target_C": target})
+        except RpcError as err:
+            raise HomeAssistantError(f"TRV rejected the change: {err.message}") from err
+        except GatewayError as err:
+            raise HomeAssistantError(f"Could not set temperature: {err}") from err
+        trv.target_C = target
+        self.async_update_listeners()
+        return target
+
+    async def async_set_mode(self, trv_id: int, mode: str, target_c: float | None) -> float | None:
+        """Switch a TRV to auto (schedule), heat (manual) or off (minimum target).
+
+        ``target_c`` is the target currently shown, remembered when switching
+        off so that switching to heat can restore it. Returns the target that
+        was sent to the TRV, if any.
+        """
+        trv = self.get_trv(trv_id)
+        async with self._mode_lock:
+            if mode == MODE_AUTO:
+                if trv.rules is None or trv.rules_stale:
+                    try:
+                        await self.async_fetch_rules(trv_id)
+                    except GatewayError as err:
+                        raise HomeAssistantError(f"Could not read schedule: {err}") from err
+                if not trv.rules:
+                    raise ServiceValidationError(
+                        "The TRV has no schedule",
+                        translation_domain=DOMAIN,
+                        translation_key="no_schedule",
+                    )
+                await self.async_set_paused(trv_id, False)
+                # The schedule only acts at its switching times; apply the
+                # current period right away like other thermostats do.
+                rule = current_rule(trv.rules or [], dt_util.now())
+                if rule is not None and "target_C" in rule:
+                    return await self.async_set_target(trv_id, rule["target_C"])
+                return None
+
+            if (
+                trv.rules is None
+                or trv.rules_stale
+                or any(r.get("enable", True) for r in trv.rules)
+            ):
+                await self.async_set_paused(trv_id, True)
+            if mode == MODE_OFF:
+                if target_c is not None and target_c > trv.limits.min_c:
+                    self._last_target[trv.addr] = target_c
+                    await self._target_store.async_save(self._last_target)
+                return await self.async_set_target(trv_id, trv.limits.min_c)
+            if target_c is None or target_c <= trv.limits.min_c:
+                target = self._last_target.get(trv.addr, DEFAULT_HEAT_C)
+                return await self.async_set_target(
+                    trv_id, min(max(target, trv.limits.min_c), trv.limits.max_c)
+                )
+            return None
