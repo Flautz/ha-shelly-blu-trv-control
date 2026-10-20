@@ -112,10 +112,17 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
             hass, 1, f"{DOMAIN}.{entry.entry_id}.last_target"
         )
         self._last_target: dict[str, float] = {}
+        # Rules last read from each TRV, so a restart needs no Bluetooth
+        # read unless the schedule revision changed meanwhile.
+        self._rules_store: Store[dict[str, dict[str, Any]]] = Store(
+            hass, 1, f"{DOMAIN}.{entry.entry_id}.rules"
+        )
+        self._rules_cache: dict[str, dict[str, Any]] = {}
 
     async def _async_setup(self) -> None:
         self._paused = await self._store.async_load() or {}
         self._last_target = await self._target_store.async_load() or {}
+        self._rules_cache = await self._rules_store.async_load() or {}
 
     def by_addr(self, addr: str) -> TrvState | None:
         """Return the TRV with the given Bluetooth address."""
@@ -140,6 +147,9 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
             trv = self.trvs.get(trv_id)
             if trv is None or trv.addr != addr:
                 trv = self.trvs[trv_id] = TrvState(trv_id=trv_id, addr=addr)
+                if (cached := self._rules_cache.get(addr)) is not None:
+                    trv.rules = cached["rules"]
+                    trv.rules_rev = cached["rev"]
             seen.add(trv_id)
             trv.name = cfg.get("name")
             trv.connected = bool(status.get("connected", False))
@@ -225,6 +235,8 @@ class TrvScheduleCoordinator(DataUpdateCoordinator[dict[int, TrvState]]):
         trv.error = None
         trv.fetch_failures = 0
         trv.retry_at = 0.0
+        self._rules_cache[trv.addr] = {"rev": trv.rules_rev, "rules": trv.rules}
+        await self._rules_store.async_save(self._rules_cache)
         return trv.rules
 
     async def async_apply_rules(

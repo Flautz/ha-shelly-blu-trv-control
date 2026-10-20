@@ -34,7 +34,8 @@ The TRVs are reached through a **Shelly BLU Gateway Gen3** (local RPC
   Services and the card also accept the Shelly climate entity of a TRV.
 - Bluetooth traffic is kept low: the gateway is polled every 60 s, and rules are
   only re-read from the TRV when its `schedule_rev` changes (for example after
-  editing in the Shelly app).
+  editing in the Shelly app). The last rules read are kept across restarts, and a
+  TRV that cannot be reached is retried with a growing delay.
 
 ## Installation
 

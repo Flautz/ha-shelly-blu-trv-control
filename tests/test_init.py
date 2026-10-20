@@ -483,3 +483,28 @@ async def test_failed_schedule_read_backs_off(hass: HomeAssistant, gateway, free
     assert hass.states.get(SENSOR2).attributes["loaded"] is True
     # The other TRV was read normally.
     assert hass.states.get(SENSOR).attributes["loaded"] is True
+
+
+async def test_rules_cached_across_restart(hass: HomeAssistant, gateway) -> None:
+    """After a restart the cached rules are used while the revision matches."""
+    entry = await _setup(hass)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    trv = gateway.trv()
+    trv.calls.clear()
+    trv.fail_always = "TRV.ListScheduleRules"
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert "TRV.ListScheduleRules" not in trv.calls
+    assert hass.states.get(CLIMATE).state == "auto"
+    assert hass.states.get(SENSOR).attributes["loaded"] is True
+
+    # A changed revision (e.g. edited in the Shelly app) is read again.
+    trv.fail_always = None
+    trv.rules[0]["enable"] = False
+    trv.rev += 1
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=2))
+    await hass.async_block_till_done()
+    assert "TRV.ListScheduleRules" in trv.calls
+    assert [r["enable"] for r in hass.states.get(SENSOR).attributes["rules"]] == [False, True]
