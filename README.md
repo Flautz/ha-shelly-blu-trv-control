@@ -95,3 +95,7 @@ position 0–100 %). Advanced Shelly cron expressions can be given as `timespec`
 pip install pytest-homeassistant-custom-component
 pytest
 ```
+
+## License
+
+[MIT](LICENSE)

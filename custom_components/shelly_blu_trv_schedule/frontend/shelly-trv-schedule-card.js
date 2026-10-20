@@ -512,7 +512,6 @@ class ShellyTrvScheduleCard extends HTMLElement {
         <div class="presets">
           <button class="text" id="add" ${dis || (full ? "disabled" : "")}><ha-icon icon="mdi:plus"></ha-icon>${esc(t.add)}</button>
         </div>
-        <div class="spacer"></div>
         ${this._dirty ? `<span class="dirty">${esc(t.unsaved)}</span>` : ""}
         <button class="text" id="discard" ${dis || (this._dirty ? "" : "disabled")}>${esc(t.discard)}</button>
         <button class="primary" id="save" ${dis || (this._dirty ? "" : "disabled")}>${esc(t.save)}</button>
@@ -594,9 +593,9 @@ const STYLE = `
   .chip.on { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
   .value { display: flex; gap: 4px; align-items: center; }
   .del { margin-left: auto; }
-  .actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .actions.copy { color: var(--secondary-text-color); font-size: .9em; }
-  .spacer { flex: 1; }
+  .actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .presets { margin-right: auto; }
+  .actions.copy { justify-content: flex-start; color: var(--secondary-text-color); font-size: .9em; }
   .dirty { color: var(--warning-color, #ffa600); font-size: .85em; }
 `;
 
