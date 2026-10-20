@@ -599,8 +599,29 @@ const STYLE = `
   .dirty { color: var(--warning-color, #ffa600); font-size: .85em; }
 `;
 
-if (!customElements.get("shelly-trv-schedule-card")) {
-  customElements.define("shelly-trv-schedule-card", ShellyTrvScheduleCard);
+const CARD_TAG = "shelly-trv-schedule-card";
+
+function registerCard() {
+  if (customElements.get(CARD_TAG)) return;
+  // A fresh subclass, so the same constructor is never registered twice.
+  customElements.define(CARD_TAG, class extends ShellyTrvScheduleCard {});
+}
+
+registerCard();
+// The card is loaded as an extra module before the frontend boots. Since
+// HA 2026.10 the frontend then replaces window.customElements (scoped
+// registry polyfill) and earlier definitions are lost: define it again in
+// the new registry once that happened.
+const bootRegistry = window.customElements;
+let registerTries = 0;
+const registerTimer = setInterval(() => {
+  registerCard();
+  if (window.customElements !== bootRegistry || ++registerTries >= 120) {
+    clearInterval(registerTimer);
+  }
+}, 250);
+
+if (!window.customCards?.some((card) => card.type === CARD_TAG)) {
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: "shelly-trv-schedule-card",
