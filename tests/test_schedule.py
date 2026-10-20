@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from custom_components.shelly_blu_trv_schedule.schedule import (
+from custom_components.shelly_blu_trv_control.schedule import (
     Limits,
     ScheduleError,
     build_timespec,

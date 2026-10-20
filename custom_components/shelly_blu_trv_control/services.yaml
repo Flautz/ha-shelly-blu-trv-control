@@ -6,7 +6,7 @@ get_schedule:
         entity:
           multiple: true
           filter:
-            - integration: shelly_blu_trv_schedule
+            - integration: shelly_blu_trv_control
               domain: sensor
     refresh:
       default: false
@@ -21,7 +21,7 @@ set_schedule:
         entity:
           multiple: true
           filter:
-            - integration: shelly_blu_trv_schedule
+            - integration: shelly_blu_trv_control
               domain: sensor
     rules:
       required: true
@@ -39,7 +39,7 @@ add_rule:
         entity:
           multiple: true
           filter:
-            - integration: shelly_blu_trv_schedule
+            - integration: shelly_blu_trv_control
               domain: sensor
     time: &time
       example: "06:30"
@@ -106,7 +106,7 @@ copy_schedule:
       selector:
         entity:
           filter:
-            - integration: shelly_blu_trv_schedule
+            - integration: shelly_blu_trv_control
               domain: sensor
     entity_id: *trv
 

@@ -8,7 +8,7 @@ import json
 import pytest
 from aiohttp import web
 
-from custom_components.shelly_blu_trv_schedule.rpc import (
+from custom_components.shelly_blu_trv_control.rpc import (
     GatewayAuthError,
     GatewayClient,
     RpcError,

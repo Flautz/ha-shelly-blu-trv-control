@@ -1,4 +1,4 @@
-"""Services for Shelly BLU TRV Schedule."""
+"""Services for Shelly BLU TRV Control."""
 
 from __future__ import annotations
 

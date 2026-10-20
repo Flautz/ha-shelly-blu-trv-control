@@ -1,4 +1,4 @@
-"""Edit the on-device schedule of Shelly BLU TRVs from Home Assistant."""
+"""Schedule and mode control for Shelly BLU TRVs in Home Assistant."""
 
 from __future__ import annotations
 

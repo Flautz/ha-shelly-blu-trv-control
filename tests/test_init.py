@@ -15,8 +15,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.shelly_blu_trv_schedule.const import CONF_SHELLY_ENTRY_ID, DOMAIN
-from custom_components.shelly_blu_trv_schedule.schedule import current_rule
+from custom_components.shelly_blu_trv_control.const import CONF_SHELLY_ENTRY_ID, DOMAIN
+from custom_components.shelly_blu_trv_control.schedule import current_rule
 
 from .conftest import ADDR, GW_MAC
 

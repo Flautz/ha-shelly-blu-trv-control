@@ -1,4 +1,4 @@
-"""Base entity for Shelly BLU TRV Schedule."""
+"""Base entity for Shelly BLU TRV Control."""
 
 from __future__ import annotations
 

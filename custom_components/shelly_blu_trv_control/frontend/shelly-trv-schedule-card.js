@@ -2,9 +2,9 @@
  * Shelly BLU TRV schedule card.
  *
  * Shows the weekly schedule stored on a Shelly BLU TRV and lets you edit
- * it. Talks to the shelly_blu_trv_schedule integration via websocket.
+ * it. Talks to the shelly_blu_trv_control integration via websocket.
  */
-const DOMAIN = "shelly_blu_trv_schedule";
+const DOMAIN = "shelly_blu_trv_control";
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const MAX_RULES = 10;
 
@@ -607,6 +607,6 @@ if (!customElements.get("shelly-trv-schedule-card")) {
     name: "Shelly BLU TRV Schedule",
     description: "Edit the schedule stored on a Shelly BLU TRV",
     preview: false,
-    documentationURL: "https://github.com/Flautz/ha-shelly-blu-trv-schedule",
+    documentationURL: "https://github.com/Flautz/ha-shelly-blu-trv-control",
   });
 }

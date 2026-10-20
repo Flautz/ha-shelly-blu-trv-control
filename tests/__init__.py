@@ -1,1 +1,1 @@
-"""Tests for shelly_blu_trv_schedule."""
+"""Tests for shelly_blu_trv_control."""

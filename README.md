@@ -1,18 +1,32 @@
-# Shelly BLU TRV Schedule
+# Shelly BLU TRV Control
 
-Home Assistant integration to view and edit the **schedule stored on Shelly BLU TRV
-thermostats** — without the Shelly app or cloud. The rules live on the thermostat
-itself, so the schedule keeps working when Home Assistant or Wi-Fi is down.
+Home Assistant integration that adds what the built-in Shelly integration is missing
+for **Shelly BLU TRV** thermostats:
+
+- **Auto / heat / off modes.** The Shelly integration only offers *heat* for a BLU TRV,
+  so the thermostat card has no mode buttons. This integration adds a thermostat
+  entity with **auto** (the schedule on the TRV runs), **heat** (manual) and **off**,
+  the same as e.g. Homematic thermostats offer.
+- **The schedule stored on the TRV**: view and edit it in a card, with services for
+  automations. No Shelly app or cloud is needed. The rules live on the thermostat itself,
+  so the schedule keeps working when Home Assistant or Wi-Fi is down.
+
+> [!NOTE]
+> With the built-in Shelly integration alone, a BLU TRV only supports the *heat*
+> mode, so you cannot switch it to a schedule (auto) or off from the thermostat card.
+
+![Thermostat card of a BLU TRV: left the Shelly integration with only heat, right with auto, heat and off](https://raw.githubusercontent.com/Flautz/ha-shelly-blu-trv-control/main/docs/thermostat.png)
+
+![Schedule card for two BLU TRVs: weekly overview and rule editor](https://raw.githubusercontent.com/Flautz/ha-shelly-blu-trv-control/main/docs/screenshot.png)
 
 The TRVs are reached through a **Shelly BLU Gateway Gen3** (local RPC
-`BluTrv.Call` → `TRV.ListScheduleRules` / `AddScheduleRule` /
+`BluTrv.Call` → `TRV.SetTarget`, `TRV.ListScheduleRules` / `AddScheduleRule` /
 `UpdateScheduleRule` / `RemoveScheduleRule`).
-
-![Schedule card for two BLU TRVs: weekly overview and rule editor](https://raw.githubusercontent.com/Flautz/ha-shelly-blu-trv-schedule/main/docs/screenshot.png)
 
 ## Features
 
-- **Lovelace card** with a weekly overview (colour-coded by temperature) and an
+- **Thermostat with modes** (see below) for the standard `thermostat` card.
+- **Schedule card** with a weekly overview (colour-coded by temperature) and an
   editor: time, weekdays, temperature or valve position, on/off per rule,
   add/delete, save. It can also copy a schedule to another TRV.
 - Per TRV:
@@ -40,13 +54,13 @@ The TRVs are reached through a **Shelly BLU Gateway Gen3** (local RPC
 ## Installation
 
 **HACS:** *HACS → ⋮ → Custom repositories* → add
-`https://github.com/Flautz/ha-shelly-blu-trv-schedule` as type *Integration*, then install
-**Shelly BLU TRV Schedule** and restart Home Assistant.
+`https://github.com/Flautz/ha-shelly-blu-trv-control` as type *Integration*, then install
+**Shelly BLU TRV Control** and restart Home Assistant.
 
-**Manual:** copy `custom_components/shelly_blu_trv_schedule` into your
+**Manual:** copy `custom_components/shelly_blu_trv_control` into your
 `config/custom_components/` folder and restart Home Assistant.
 
-Then add it under *Settings → Devices & services → Add integration → Shelly BLU TRV Schedule*.
+Then add it under *Settings → Devices & services → Add integration → Shelly BLU TRV Control*.
 Gateways already set up in the Shelly integration are offered automatically,
 including their credentials. You can also enter the address manually.
 
@@ -68,11 +82,25 @@ features:
     hvac_modes: [auto, heat, "off"]
 ```
 
+### Upgrading from "Shelly BLU TRV Schedule"
+
+Up to v0.2.1 this integration was called *Shelly BLU TRV Schedule* (domain
+`shelly_blu_trv_schedule`). The domain changed with v0.3.0, so the old integration
+has to be replaced once:
+
+1. Delete the *Shelly BLU TRV Schedule* integration under *Settings → Devices & services*,
+   remove it in HACS and remove the old custom repository.
+2. Add `https://github.com/Flautz/ha-shelly-blu-trv-control` as custom repository,
+   install **Shelly BLU TRV Control**, restart and add the integration again.
+3. Services are now `shelly_blu_trv_control.*`. The card type
+   (`custom:shelly-trv-schedule-card`) is unchanged. Check entity IDs in dashboards
+   and automations. The schedule itself is stored on the TRVs and is not affected.
+
 ## Service examples
 
 ```yaml
 # Replace the whole schedule
-action: shelly_blu_trv_schedule.set_schedule
+action: shelly_blu_trv_control.set_schedule
 data:
   entity_id: sensor.schlafzimmer_zeitplan
   rules:
@@ -81,7 +109,7 @@ data:
     - { time: "22:00", days: all, target_C: 17 }
 
 # Add a single rule
-action: shelly_blu_trv_schedule.add_rule
+action: shelly_blu_trv_control.add_rule
 data:
   entity_id: climate.shellyblutrv_f84477000001   # climate entity works too
   time: "17:00"
@@ -89,7 +117,7 @@ data:
   target_C: 20.5
 
 # Read the rules
-action: shelly_blu_trv_schedule.get_schedule
+action: shelly_blu_trv_control.get_schedule
 data:
   entity_id: sensor.schlafzimmer_zeitplan
 response_variable: schedule

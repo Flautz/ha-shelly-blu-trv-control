@@ -1,10 +1,10 @@
-"""Constants for the Shelly BLU TRV Schedule integration."""
+"""Constants for the Shelly BLU TRV Control integration."""
 
 from __future__ import annotations
 
 from datetime import timedelta
 
-DOMAIN = "shelly_blu_trv_schedule"
+DOMAIN = "shelly_blu_trv_control"
 
 CONF_SHELLY_ENTRY_ID = "shelly_entry_id"
 

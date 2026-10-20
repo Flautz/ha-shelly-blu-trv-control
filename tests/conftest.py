@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from custom_components.shelly_blu_trv_schedule.rpc import GatewayConnectionError, RpcError
+from custom_components.shelly_blu_trv_control.rpc import GatewayConnectionError, RpcError
 
 GW_MAC = "A0B1C2D3E4F5"
 ADDR = "f8:44:77:00:00:01"
@@ -172,5 +172,5 @@ def gateway():
     async def _call(self, method, params=None, timeout=0):
         return await fake.call(method, params, timeout)
 
-    with patch("custom_components.shelly_blu_trv_schedule.rpc.GatewayClient.call", _call):
+    with patch("custom_components.shelly_blu_trv_control.rpc.GatewayClient.call", _call):
         yield fake

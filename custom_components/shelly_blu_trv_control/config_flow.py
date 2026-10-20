@@ -1,4 +1,4 @@
-"""Config flow for Shelly BLU TRV Schedule."""
+"""Config flow for Shelly BLU TRV Control."""
 
 from __future__ import annotations
 
