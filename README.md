@@ -8,6 +8,8 @@ The TRVs are reached through a **Shelly BLU Gateway Gen3** (local RPC
 `BluTrv.Call` → `TRV.ListScheduleRules` / `AddScheduleRule` /
 `UpdateScheduleRule` / `RemoveScheduleRule`).
 
+![Schedule card for two BLU TRVs: weekly overview and rule editor](https://raw.githubusercontent.com/Flautz/ha-shelly-blu-trv-schedule/main/docs/screenshot.png)
+
 ## Features
 
 - **Lovelace card** with a weekly overview (colour-coded by temperature) and an
